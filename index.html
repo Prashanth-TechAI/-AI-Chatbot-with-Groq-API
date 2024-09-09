@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prashanth AI Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <!-- Include Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Include Highlight.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h2>Prashanth AI</h2>
+        </div>
+        <div class="chat-box" id="chat-box">
+            <!-- Chat messages will be added here dynamically -->
+        </div>
+        <form id="chat-form">
+            <img src="{{ url_for('static', filename='defoult.png') }}" alt="User Logo" class="input-logo">
+            <input type="text" id="user-message" name="message" placeholder="Type your message..." autocomplete="off" required>
+            <button type="submit">Send</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('chat-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const userMessage = document.getElementById('user-message').value.trim();
+            if (userMessage === "") return;
+
+            const chatBox = document.getElementById('chat-box');
+            
+            // Display the user message with logo
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.classList.add('message', 'user-message');
+            userMessageDiv.innerHTML = `
+                <img src="{{ url_for('static', filename='defoult.png') }}" alt="User Logo" class="user-logo">
+                <span>${userMessage}</span>
+            `;
+            chatBox.appendChild(userMessageDiv);
+
+            // Clear the input field
+            document.getElementById('user-message').value = '';
+
+            // Scroll to the bottom
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Send the message to the Flask server
+            fetch('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `message=${encodeURIComponent(userMessage)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                const botResponse = data.response;
+
+                // Parse Markdown to HTML
+                const parsedResponse = marked.parse(botResponse);
+
+                // Display bot response with logo
+                const botMessageDiv = document.createElement('div');
+                botMessageDiv.classList.add('message', 'bot-message');
+                botMessageDiv.innerHTML = `
+                    <img src="{{ url_for('static', filename='pk.jpeg') }}" alt="Bot Logo" class="bot-logo">
+                    <span>${parsedResponse}</span>
+                `;
+                chatBox.appendChild(botMessageDiv);
+
+                // Add copy buttons for code blocks
+                botMessageDiv.querySelectorAll('pre code').forEach((block) => {
+                    hljs.highlightBlock(block);
+                    const copyButton = document.createElement('button');
+                    copyButton.textContent = 'Copy';
+                    copyButton.classList.add('copy-button');
+                    block.parentElement.appendChild(copyButton);
+
+                    // Add copy functionality
+                    copyButton.addEventListener('click', () => {
+                        const codeText = block.innerText;
+                        navigator.clipboard.writeText(codeText);
+                        copyButton.textContent = 'Copied!';
+                        setTimeout(() => copyButton.textContent = 'Copy', 2000);
+                    });
+                });
+
+                // Scroll to the bottom
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                const errorDiv = document.createElement('div');
+                errorDiv.classList.add('message', 'bot-message');
+                errorDiv.textContent = "Sorry, something went wrong!";
+                chatBox.appendChild(errorDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+        });
+    </script>
+</body>
+</html>
