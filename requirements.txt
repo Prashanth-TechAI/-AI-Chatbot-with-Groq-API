@@ -1,0 +1,4 @@
+Flask
+groq
+requests
+gunicorn
